@@ -84,10 +84,12 @@ export default function Reportes() {
     let costoVentas = 0
     const ventasConGanancia = ventas.map(v => {
       let costo = 0
+      let prods = []
       try {
-        const prods = JSON.parse(v.productos || '[]')
-        costo = prods.reduce((a, p) => a + ((p.precio_costo || 0) * (p.cantidad || 1)), 0)
+        const parsed = JSON.parse(v.productos || '[]')
+        prods = Array.isArray(parsed) ? parsed : []
       } catch {}
+      costo = prods.reduce((a, p) => a + ((p.precio_costo || 0) * (p.cantidad || 1)), 0)
       costoVentas += costo
       return { ...v, costo, ganancia: (v.total || 0) - costo }
     })
@@ -98,7 +100,10 @@ export default function Reportes() {
       const rows = []
       ventasConGanancia.forEach(v => {
         let prods = []
-        try { prods = JSON.parse(v.productos || '[]') } catch {}
+        try {
+          const parsed = JSON.parse(v.productos || '[]')
+          prods = Array.isArray(parsed) ? parsed : []
+        } catch {}
         prods.forEach(p => {
           const precioVenta = p.precio || p.precio_venta || 0
           const precioCosto = p.precio_costo || 0

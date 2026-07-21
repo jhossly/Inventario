@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import useDialog from '../hooks/useDialog.jsx'
-import { getProductos, ajustarStockProducto, getMiEmpresa } from '../services/dataService'
+import { getProductos, ajustarStockProducto, getMiEmpresa, updateProducto } from '../services/dataService'
 import { PackageMinus, PackagePlus, Search, Save, AlertTriangle, ClipboardList } from 'lucide-react'
 
 const MOTIVOS = [
@@ -70,6 +70,9 @@ export default function AjusteStock() {
         motivoFinal,
         adminNombre || 'Administrador'
       )
+      await updateProducto(seleccionado.id, {
+        stock_actual: nuevoStock()
+      })
       setOk(true)
       setTimeout(() => setOk(false), 2500)
       // Reset y recarga

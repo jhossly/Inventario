@@ -6,6 +6,7 @@ import {
   getProductosByProveedor,
   createFacturaItemProveedor,
   getProveedores,
+  getEmpresas,
   createGasto,
   updateProducto,
   createMovimiento,
@@ -37,13 +38,14 @@ export default function FacturasProveedores() {
 
   const cargarDatos = async () => {
     try {
-      const [facData, provData, emp] = await Promise.all([
+      const [facData, provData, empresasData, emp] = await Promise.all([
         getFacturasProveedores(),
         getProveedores(),
+        getEmpresas(),
         getMiEmpresa()
       ])
       setFacturas(Array.isArray(facData) ? facData : [])
-      setProveedores(provData.data || [])
+      setProveedores(Array.isArray(provData?.data) ? provData.data : [])
       if (emp?.tasa_impuesto) setTasaIva(Number(emp.tasa_impuesto))
     } catch (err) {
       console.log('Error cargando datos:', err)

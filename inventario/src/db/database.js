@@ -1162,9 +1162,10 @@ export async function addTicketFactura(data) {
 export async function getFacturasProveedores() {
     const database = await getDB();
     return await database.select(`
-        SELECT fp.*, e.nombre as proveedor_nombre
+        SELECT fp.*, COALESCE(e.nombre, c.nombre) as proveedor_nombre
         FROM facturas_proveedores fp
         LEFT JOIN empresa e ON e.id = fp.proveedor_id
+        LEFT JOIN contactos c ON c.id = fp.proveedor_id
         ORDER BY fp.fecha DESC
     `);
 }

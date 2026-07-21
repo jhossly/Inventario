@@ -119,7 +119,7 @@ export default function Tickets() {
                                         <td className="px-4 py-3 font-medium">{t.numero_ticket || '—'}</td>
                                         <td className="px-4 py-3">{fechaStr}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${t.metodo_pago === 'credito' ? 'bg-red-100 text-red-700' : 'bg-menta-border text-[#0d9488]'}`}>
+                                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${t.metodo_pago === 'credito' ? 'text-orange-600' : 'bg-menta-border text-[#0d9488]'}`}>
                                                 {t.metodo_pago || 'efectivo'}
                                             </span>
                                         </td>

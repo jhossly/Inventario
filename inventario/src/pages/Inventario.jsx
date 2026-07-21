@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getProductos, getCategorias, getProveedores, createFacturaProveedor, createFacturaItemProveedor, updateProducto, createMovimiento, createGasto, createTicket, addMovimientoCaja, getCajaAbierta, getTasaImpuesto } from '../services/dataService'
-import { exportReport } from '../utils/exportExcel'
+import { exportExcel } from '../utils/exportExcel'
 import { Package, Filter, FileDown, Search, Plus, X, ShoppingCart, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 import { useTema } from '../context/TemaContext'
 import useDialog from '../hooks/useDialog.jsx'
@@ -93,7 +93,8 @@ export default function Inventario() {
       codigo: productoSeleccionado.codigo,
       cantidad,
       precio_unitario: precioUnitario,
-      subtotal: cantidad * precioUnitario
+      subtotal: cantidad * precioUnitario,
+      tasa_impuesto: productoSeleccionado.tasa_impuesto_producto || tasaImpuesto || 0
     }
     setItemsOperacion([...itemsOperacion, item])
     setProductoSeleccionado(null)
@@ -111,13 +112,33 @@ export default function Inventario() {
   )
 
   const impuestoOperacion = useMemo(() => {
-    if (tipoOperacion === 'venta' && !preciosConIva && tasaImpuesto > 0) {
-      return totalOperacion * (tasaImpuesto / 100)
+    if (preciosConIva) {
+      return 0
     }
-    return 0
-  }, [totalOperacion, tipoOperacion, preciosConIva, tasaImpuesto])
+    return itemsOperacion.reduce((sum, i) => {
+      const tasa = Number(i.tasa_impuesto || tasaImpuesto || 0)
+      const base = (i.cantidad || 0) * (i.precio_unitario || 0)
+      return sum + base * (tasa / 100)
+    }, 0)
+  }, [itemsOperacion, preciosConIva, tasaImpuesto])
 
-  const totalConImpuesto = totalOperacion + impuestoOperacion
+  const totalConImpuesto = preciosConIva ? totalOperacion : totalOperacion + impuestoOperacion
+
+  const desgloseIva = useMemo(() => {
+    const map = new Map()
+    itemsOperacion.forEach(item => {
+      const tasa = Number(item.tasa_impuesto || tasaImpuesto || 0)
+      if (!map.has(tasa)) map.set(tasa, 0)
+      map.set(tasa, map.get(tasa) + (item.cantidad || 0) * (item.precio_unitario || 0))
+    })
+    return Array.from(map.entries()).map(([tasa, base]) => ({
+      tasa,
+      base,
+      impuesto: preciosConIva
+        ? base - base / (1 + tasa / 100)
+        : base * (tasa / 100)
+    }))
+  }, [itemsOperacion, preciosConIva, tasaImpuesto])
 
   const handleConfirmarOperacion = async () => {
     if (guardando) return
@@ -131,15 +152,15 @@ export default function Inventario() {
     try {
       for (const item of itemsOperacion) {
         const prod = productos.find(p => p.id === item.producto_id)
-        const nuevoStock = tipoOperacion === 'compra'
-          ? (prod?.stock_actual || 0) + item.cantidad
-          : (prod?.stock_actual || 0) - item.cantidad
 
-        await updateProducto(item.producto_id, {
-          stock_actual: Math.max(0, nuevoStock),
-          precio_costo: tipoOperacion === 'compra' ? item.precio_unitario : prod?.precio_costo,
-          precio_venta: prod?.precio_venta
-        })
+        if (tipoOperacion === 'compra') {
+          const nuevoStock = (prod?.stock_actual || 0) + item.cantidad
+          await updateProducto(item.producto_id, {
+            stock_actual: Math.max(0, nuevoStock),
+            precio_costo: item.precio_unitario,
+            precio_venta: prod?.precio_venta
+          })
+        }
 
         await createMovimiento({
           producto_id: item.producto_id,
@@ -153,6 +174,29 @@ export default function Inventario() {
       }
 
       if (tipoOperacion === 'compra' && proveedorId) {
+        const numeroFactura = `FP-${Date.now().toString().slice(-8)}`
+        const totalFactura = preciosConIva ? totalOperacion : totalConImpuesto
+        const { data: factura, error: factError } = await createFacturaProveedor({
+          numero_factura: numeroFactura,
+          proveedor_id: proveedorId,
+          fecha: new Date().toISOString().split('T')[0],
+          total: totalFactura || totalConImpuesto,
+          estado: 'pagada',
+          precios_con_iva: preciosConIva
+        })
+
+        if (factError) throw factError
+
+        for (const item of itemsOperacion) {
+          await createFacturaItemProveedor({
+            factura_proveedor_id: factura.id,
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario,
+            subtotal: item.cantidad * item.precio_unitario
+          })
+        }
+
         await createGasto({
           monto: totalConImpuesto,
           tipo: 'egreso',
@@ -160,6 +204,22 @@ export default function Inventario() {
           fecha: new Date().toISOString().split('T')[0],
           contacto_id: proveedorId
         })
+      }
+
+      if (tipoOperacion === 'venta') {
+        const ticket = await createTicket({
+          productos: itemsOperacion.map(item => ({
+            producto_id: item.producto_id,
+            cantidad: item.cantidad,
+            precio: item.precio_unitario,
+            precio_costo: productos.find(p => p.id === item.producto_id)?.precio_costo || 0,
+            tasa_impuesto: item.tasa_impuesto || tasaImpuesto || 0
+          })),
+          metodo_pago: 'efectivo',
+          precios_con_iva: preciosConIva,
+          tasa_impuesto: tasaImpuesto
+        })
+        if (!ticket) throw new Error('No se pudo registrar la venta')
       }
 
       await cargarDatos()
@@ -179,16 +239,15 @@ export default function Inventario() {
 
   const handleExport = async () => {
     try {
-      const headers = ['Producto', 'Categoría', 'Stock Actual', 'Stock Mínimo', 'Precio Venta', 'Estado']
-      const rows = productosConEstado.map(p => [
-        p.nombre,
-        p.categoria,
-        p.stock_actual,
-        p.stock_minimo,
-        p.precio_venta,
-        p.estado === 'ok' ? 'Con Stock' : p.estado === 'bajo' ? 'Stock Bajo' : 'Agotado'
-      ])
-      await exportReport('inventario', headers, rows)
+      const rows = productosConEstado.map(p => ({
+        Producto: p.nombre,
+        Categoría: p.categoria,
+        'Stock Actual': p.stock_actual,
+        'Stock Mínimo': p.stock_minimo,
+        'Precio Venta': p.precio_venta,
+        Estado: p.estado === 'ok' ? 'Con Stock' : p.estado === 'bajo' ? 'Stock Bajo' : 'Agotado'
+      }))
+      await exportExcel(rows, 'inventario')
       dialog.alert('✅ Exportado a Excel exitosamente')
     } catch (err) {
       console.error('Error exportando:', err)
@@ -463,18 +522,24 @@ export default function Inventario() {
                 </div>
               )}
 
-              {/* Precios incluyen IVA (solo venta) */}
-              {tipoOperacion === 'venta' && tasaImpuesto > 0 && (
-                <label className="flex items-center gap-2 text-sm font-semibold mb-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={preciosConIva}
-                    onChange={(e) => setPreciosConIva(e.target.checked)}
-                    className="w-4 h-4 accent-menta"
-                  />
-                  Precios incluyen IVA
-                  <span className="text-xs text-text-secondary">({tasaImpuesto}% incluido)</span>
-                </label>
+              {/* Precios incluyen IVA */}
+              {tasaImpuesto > 0 && (
+                <div className="mb-3 p-3 rounded-xl border-2 border-menta-border bg-menta-bg">
+                  <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={preciosConIva}
+                      onChange={(e) => setPreciosConIva(e.target.checked)}
+                      className="w-4 h-4 accent-menta"
+                    />
+                    No calcular IVA (precios netos)
+                  </label>
+                  <p className="text-xs text-text-muted mt-1.5 leading-relaxed">
+                    {preciosConIva
+                      ? 'Marcado: ingresas precios SIN IVA y NO se agrega impuesto. Total = subtotal.'
+                      : 'Sin marcar: ingresas precios CON IVA incluido y se extrae el impuesto del subtotal.'}
+                  </p>
+                </div>
               )}
 
               {/* Lista de items */}
@@ -484,14 +549,14 @@ export default function Inventario() {
                     Items a {tipoOperacion === 'compra' ? 'comprar' : 'vender'} ({itemsOperacion.length})
                   </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {itemsOperacion.map(item => (
-                      <div key={item.producto_id} className="flex items-center justify-between p-3 bg-white border-2 border-menta-border rounded-xl">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm text-text-dark">{item.nombre}</p>
-                          <p className="text-xs text-text-sub">
-                            {item.cantidad} x ${item.precio_unitario.toFixed(2)} = ${(item.cantidad * item.precio_unitario).toFixed(2)}
-                          </p>
-                        </div>
+                     {itemsOperacion.map(item => (
+                       <div key={item.producto_id} className="flex items-center justify-between p-3 bg-white border-2 border-menta-border rounded-xl">
+                         <div className="flex-1">
+                           <p className="font-medium text-sm text-text-dark">{item.nombre}</p>
+                           <p className="text-xs text-text-sub">
+                             {item.cantidad} x ${item.precio_unitario.toFixed(2)} = ${(item.cantidad * item.precio_unitario).toFixed(2)} <span className="text-text-muted">(IVA {item.tasa_impuesto || tasaImpuesto || 0}%)</span>
+                           </p>
+                         </div>
                         <button
                           onClick={() => handleQuitarItem(item.producto_id)}
                           className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition"
@@ -501,22 +566,28 @@ export default function Inventario() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-2 p-3 rounded-xl flex flex-col items-end gap-1" style={{ backgroundColor: tema.primaryTint }}>
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-bold text-text-dark">Subtotal:</span>
-                      <span className="font-bold" style={{ color: tema.primaryDark }}>${totalOperacion.toFixed(2)}</span>
-                    </div>
-                    {tipoOperacion === 'venta' && !preciosConIva && tasaImpuesto > 0 && (
-                      <div className="flex items-center justify-between w-full text-sm">
-                        <span className="text-text-secondary">IVA ({tasaImpuesto}%):</span>
-                        <span className="font-bold" style={{ color: tema.primaryDark }}>${impuestoOperacion.toFixed(2)}</span>
+                    <div className="mt-2 p-3 rounded-xl flex flex-col items-end gap-1" style={{ backgroundColor: tema.primaryTint }}>
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-bold text-text-dark">Subtotal sin impuestos:</span>
+                        <span className="font-bold" style={{ color: tema.primaryDark }}>${totalOperacion.toFixed(2)}</span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-bold text-text-dark">Total:</span>
-                      <span className="text-xl font-bold" style={{ color: tema.primaryDark }}>${totalConImpuesto.toFixed(2)}</span>
+                      {!preciosConIva && desgloseIva.map(d => (
+                        <div key={d.tasa} className="flex items-center justify-between w-full text-sm">
+                          <span className="text-text-secondary">IVA {d.tasa}%:</span>
+                          <span className="font-bold" style={{ color: tema.primaryDark }}>${d.impuesto.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {preciosConIva && (
+                        <div className="flex items-center justify-between w-full text-sm">
+                          <span className="text-text-secondary">IVA:</span>
+                          <span className="font-bold" style={{ color: tema.primaryDark }}>$0.00</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-bold text-text-dark">Total a pagar:</span>
+                        <span className="text-xl font-bold" style={{ color: tema.primaryDark }}>${totalConImpuesto.toFixed(2)}</span>
+                      </div>
                     </div>
-                  </div>
                 </div>
               )}
             </div>

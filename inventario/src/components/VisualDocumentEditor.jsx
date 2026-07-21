@@ -11,6 +11,40 @@ export default function VisualDocumentEditor({ tipo, empresa, onSave }) {
   const [nombrePlantilla, setNombrePlantilla] = useState('')
   const [modoEdicion, setModoEdicion] = useState('simple') // 'simple' o 'avanzado'
 
+  const CAMPOS_DISPONIBLES = {
+    ticket: [
+      { id: 'numero_ticket', label: 'Número de ticket', tipo: 'texto', fijo: true },
+      { id: 'fecha', label: 'Fecha', tipo: 'texto', fijo: true },
+      { id: 'items', label: 'Items', tipo: 'tabla', fijo: true },
+      { id: 'subtotal', label: 'Subtotal', tipo: 'moneda', fijo: true },
+      { id: 'impuesto', label: 'IVA', tipo: 'moneda', fijo: true },
+      { id: 'total', label: 'Total', tipo: 'moneda', fijo: true },
+      { id: 'metodo_pago', label: 'Método de pago', tipo: 'texto', fijo: false },
+      { id: 'cliente', label: 'Cliente', tipo: 'texto', fijo: false },
+      { id: 'mensaje', label: 'Mensaje final', tipo: 'texto', fijo: false },
+    ],
+    factura: [
+      { id: 'numero_factura', label: 'Número de factura', tipo: 'texto', fijo: true },
+      { id: 'fecha_emision', label: 'Fecha de emisión', tipo: 'texto', fijo: true },
+      { id: 'ruc', label: 'RUC', tipo: 'texto', fijo: true },
+      { id: 'razon_social', label: 'Razón social', tipo: 'texto', fijo: true },
+      { id: 'items', label: 'Items', tipo: 'tabla', fijo: true },
+      { id: 'subtotal_0', label: 'Subtotal 0%', tipo: 'moneda', fijo: false },
+      { id: 'subtotal_iva', label: 'Subtotal IVA', tipo: 'moneda', fijo: false },
+      { id: 'impuesto', label: 'IVA total', tipo: 'moneda', fijo: true },
+      { id: 'total', label: 'Total', tipo: 'moneda', fijo: true },
+      { id: 'forma_pago', label: 'Forma de pago', tipo: 'texto', fijo: false },
+    ],
+    nota_credito: [
+      { id: 'numero_nota', label: 'Número nota crédito', tipo: 'texto', fijo: true },
+      { id: 'fecha', label: 'Fecha', tipo: 'texto', fijo: true },
+      { id: 'motivo', label: 'Motivo', tipo: 'texto', fijo: true },
+      { id: 'monto', label: 'Monto', tipo: 'moneda', fijo: true },
+      { id: 'cliente', label: 'Cliente', tipo: 'texto', fijo: false },
+      { id: 'comprobante_relacionado', label: 'Comprobante relacionado', tipo: 'texto', fijo: false },
+    ],
+  }
+
   // Inicializar campos disponibles según el tipo
   useEffect(() => {
     const campos = CAMPOS_DISPONIBLES[tipo] || []

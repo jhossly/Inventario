@@ -56,7 +56,7 @@ export default function CierreCaja() {
         getProductos(),
       ])
 
-      const productosMap = new Map((productos || []).map(p => [p.id, p]))
+      const productosMap = new Map((productos || []).map(p => [String(p.id), p]))
 
       const filtrarDia = (fechaStr) => {
         if (!fechaStr) return false
@@ -79,7 +79,7 @@ export default function CierreCaja() {
       const ventasUnicas = new Map()
 
       for (const item of factItemsDia) {
-        const prod = productosMap.get(item.producto_id) || {}
+        const prod = productosMap.get(String(item.producto_id)) || {}
         const precioVenta = Number(item.precio_unitario || 0)
         const costo = Number(prod.precio_costo || 0)
         const cantidad = Number(item.cantidad || 0)
@@ -108,7 +108,7 @@ export default function CierreCaja() {
           items = []
         }
         for (const it of items) {
-          const prod = productosMap.get(it.producto_id || it.id) || {}
+          const prod = productosMap.get(String(it.producto_id || it.id)) || {}
           const precioVenta = Number(it.precio || it.precio_venta || it.precio_unitario || 0)
           const costo = Number(prod.precio_costo || it.precio_costo || 0)
           const cantidad = Number(it.cantidad || 0)
@@ -143,7 +143,7 @@ export default function CierreCaja() {
         let totalFactura = 0
         let costoFactura = 0
         for (const item of items) {
-          const prod = productosMap.get(item.producto_id) || {}
+          const prod = productosMap.get(String(item.producto_id)) || {}
           const precioVenta = Number(item.precio_unitario || 0)
           const costo = Number(prod.precio_costo || 0)
           const cantidad = Number(item.cantidad || 0)
@@ -170,7 +170,7 @@ export default function CierreCaja() {
         let totalTicket = 0
         let costoTicket = 0
         for (const it of items) {
-          const prod = productosMap.get(it.producto_id || it.id) || {}
+          const prod = productosMap.get(String(it.producto_id || it.id)) || {}
           const precioVenta = Number(it.precio || it.precio_venta || it.precio_unitario || 0)
           const costo = Number(prod.precio_costo || it.precio_costo || 0)
           const cantidad = Number(it.cantidad || 0)
@@ -422,7 +422,7 @@ export default function CierreCaja() {
                 <tr key={m.id} className="hover:bg-menta-bg transition">
                   <td className="px-4 py-3 text-sm">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                      m.tipo === 'ingreso' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      m.tipo === 'ingreso' ? 'bg-green-100 text-green-700' : m.tipo === 'credito' ? 'text-orange-600' : 'bg-red-100 text-red-700'
                     }`}>
                       {m.tipo === 'ingreso' ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
                       {m.tipo}
@@ -430,7 +430,7 @@ export default function CierreCaja() {
                   </td>
                   <td className="px-4 py-3 text-sm">{m.descripcion || '-'}</td>
                   <td className="px-4 py-3 text-sm">{formatearFecha(m.fecha)}</td>
-                  <td className={`px-4 py-3 text-right text-sm font-bold ${m.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`px-4 py-3 text-right text-sm font-bold ${m.tipo === 'ingreso' ? 'text-green-600' : m.tipo === 'credito' ? 'text-orange-600' : 'text-red-600'}`}>
                     {formatearMoneda(m.monto)}
                   </td>
                 </tr>

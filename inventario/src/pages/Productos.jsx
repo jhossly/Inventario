@@ -25,6 +25,7 @@ export default function Productos() {
     codigo: '',
     imagen_url: '',
     tiene_iva: false,
+    tasa_impuesto_producto: 0,
     stock_actual: 0,
     stock_minimo: 0,
     tiempo_entrega_dias: 0,
@@ -182,7 +183,9 @@ export default function Productos() {
             })
             setShowForm(false)
             setEditingId(null)
-            setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false, stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
+            setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false,
+            tasa_impuesto_producto: 0,
+            stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
             setAlertaCosto(null)
             cargarDatos()
             return
@@ -206,6 +209,7 @@ export default function Productos() {
         codigo,
         imagen_url: form.imagen_url || null,
         tiene_impuesto: form.tiene_iva ? 1 : 0,
+        tasa_impuesto_producto: form.tasa_impuesto_producto || 0,
         stock_actual: form.stock_actual || 0,
         stock_minimo: form.stock_minimo || 0,
         tiempo_entrega_dias: form.tiempo_entrega_dias || 0,
@@ -219,7 +223,9 @@ export default function Productos() {
 
       setShowForm(false)
       setEditingId(null)
-      setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false, stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
+      setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false,
+            tasa_impuesto_producto: 0,
+            stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
       setAlertaCosto(null)
       cargarDatos()
     } catch (err) {
@@ -524,7 +530,9 @@ export default function Productos() {
               onClick={() => {
                 setShowForm(false)
                 setEditingId(null)
-                setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false, stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
+                setForm({ nombre: '', precio_venta: 0, precio_costo: 0, categoria_id: '', unidad_id: '', proveedor_id: '', codigo: '', imagen_url: '', tiene_iva: false,
+            tasa_impuesto_producto: 0,
+            stock_actual: 0, stock_minimo: 0, tiempo_entrega_dias: 0 })
                 setAlertaCosto(null)
               }}
               className="px-6 py-3 bg-menta-bg border-2 border-menta-border rounded-xl font-bold text-[#0f766e] hover:bg-menta-tint transition"
@@ -570,11 +578,11 @@ export default function Productos() {
                   const pct = prob > 0 ? Math.round(prob * 100) : 0
                   const colorProb = pct > 80 ? 'text-red-600' : pct > 50 ? 'text-orange-600' : pct > 0 ? 'text-yellow-700' : 'text-slate-500'
                   const colorDias = dias === Infinity ? 'text-slate-500' : dias <= 3 ? 'text-red-600' : dias <= 7 ? 'text-orange-600' : 'text-[#0f766e]'
-                  const badgeStock = (p.stock_actual || 0) <= (p.stock_minimo || 0)
-                    ? <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">BAJO</span>
-                    : (p.stock_actual || 0) === 0
-                      ? <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">AGOTADO</span>
-                      : <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">OK</span>
+                   const badgeStock = (p.stock_actual || 0) <= (p.stock_minimo || 0)
+                     ? <span className="text-orange-600 text-xs font-bold">BAJO</span>
+                     : (p.stock_actual || 0) === 0
+                       ? <span className="text-orange-600 text-xs font-bold">AGOTADO</span>
+                       : <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-bold">OK</span>
 
                   return (
                     <tr key={p.id} className="hover:bg-menta-bg transition">

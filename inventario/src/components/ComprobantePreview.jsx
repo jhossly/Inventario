@@ -151,7 +151,7 @@ export default function ComprobantePreview({ datos, empresa, onCerrar }) {
               </div>
             )}
             {datos.esCredito && (
-              <p className="mt-2 text-xs center text-red-600 font-semibold">Venta a crédito - Pendiente de pago</p>
+              <p className="mt-2 text-xs center text-orange-600 font-semibold">Venta a crédito - Pendiente de pago</p>
             )}
           </div>
         </div>

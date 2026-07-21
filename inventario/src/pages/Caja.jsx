@@ -14,6 +14,7 @@ export default function Caja() {
   const [movimientos, setMovimientos] = useState([])
   const [tickets, setTickets] = useState([])
   const [cargandoCaja, setCargandoCaja] = useState(true)
+  const [productosMap, setProductosMap] = useState({})
 
   // Modal interno para ingreso/egreso/cerrar (reemplaza prompt nativo)
   const [modal, setModal] = useState(null)
@@ -36,6 +37,10 @@ export default function Caja() {
           setMovimientos(movs || [])
           const ticks = await dataService.getTickets().catch(() => [])
           setTickets(Array.isArray(ticks) ? ticks : [])
+          const prods = await dataService.getProductos().catch(() => [])
+          const map = {}
+          ;(prods || []).forEach(p => { map[String(p.id)] = p })
+          setProductosMap(map)
         }
       } catch (e) {
         console.error('Error cargando caja:', e)
@@ -61,7 +66,11 @@ export default function Caja() {
   const costoVentasTurno = ticketsDelTurno.reduce((s, t) => {
     try {
       const prods = JSON.parse(t.productos || '[]')
-      return s + prods.reduce((a, p) => a + ((p.precio_costo || 0) * (p.cantidad || 1)), 0)
+      const arr = Array.isArray(prods) ? prods : []
+      return s + arr.reduce((a, p) => {
+        const costoItem = (p.precio_costo || 0) || (productosMap[String(p.producto_id || p.id)]?.precio_costo || 0)
+        return a + (costoItem * (p.cantidad || 1))
+      }, 0)
     } catch {
       return s
     }
@@ -83,21 +92,36 @@ export default function Caja() {
   }
 
   const confirmarCierre = async () => {
+    if (!caja?.id) return
     const montoCierre = parseFloat(modal.monto) || cierreEsperado
-    await dataService.cerrarCaja(caja.id, montoCierre, cierreEsperado)
+    try {
+      await dataService.cerrarCaja(caja.id, montoCierre, cierreEsperado)
+    } catch (err) {
+      console.error('Error cerrando caja:', err)
+      dialog.alert('No se pudo cerrar la caja. Intenta de nuevo.')
+      return
+    }
     setModal(null)
-    // Recargar el estado REAL desde la BD para no depender solo de memoria.
-    // Tras cerrar, getCajaAbierta() debe devolver null y la UI queda en "Apertura".
-    const cajaAbierta = await dataService.getCajaAbierta().catch(() => null)
-    if (cajaAbierta) {
-      setCaja(cajaAbierta)
-      setApertura(cajaAbierta.monto_apertura || 0)
-      const movs = await dataService.getMovimientosCaja(cajaAbierta.id)
-      setMovimientos(movs || [])
-    } else {
-      setCaja(null)
-      setMovimientos([])
-      setApertura(0)
+    setCaja(null)
+    setMovimientos([])
+    setApertura(0)
+    setProductosMap({})
+    try {
+      const cajaAbierta = await dataService.getCajaAbierta().catch(() => null)
+      if (!cajaAbierta) {
+        setCaja(null)
+        setMovimientos([])
+        setApertura(0)
+        setProductosMap({})
+      } else {
+        setCaja(cajaAbierta)
+        setApertura(cajaAbierta.monto_apertura || 0)
+        const movs = await dataService.getMovimientosCaja(cajaAbierta.id)
+        setMovimientos(movs || [])
+      }
+    } catch (e) {
+      console.error('Error recargando caja tras cierre:', e)
+      window.location.reload()
     }
   }
 
@@ -234,7 +258,11 @@ export default function Caja() {
                 let costo = 0
                 try {
                   const prods = JSON.parse(t.productos || '[]')
-                  costo = prods.reduce((a, p) => a + ((p.precio_costo || 0) * (p.cantidad || 1)), 0)
+                  const arr = Array.isArray(prods) ? prods : []
+                  costo = arr.reduce((a, p) => {
+                    const costoItem = (p.precio_costo || 0) || (productosMap[String(p.producto_id || p.id)]?.precio_costo || 0)
+                    return a + (costoItem * (p.cantidad || 1))
+                  }, 0)
                 } catch {}
                 const ganancia = (t.total || 0) - costo
                 return (
@@ -329,20 +357,24 @@ export default function Caja() {
                     <div className="max-h-32 overflow-y-auto">
                       <table className="w-full text-xs">
                         <tbody className="divide-y divide-menta-border">
-                          {ticketsDelTurno.map(t => {
-                            let costo = 0
-                            try {
-                              const prods = JSON.parse(t.productos || '[]')
-                              costo = prods.reduce((a, p) => a + ((p.precio_costo || 0) * (p.cantidad || 1)), 0)
-                            } catch {}
-                            return (
-                              <tr key={t.id}>
-                                <td className="px-3 py-1 font-semibold">{t.numero_ticket}</td>
-                                <td className="px-3 py-1 text-right">${(t.total || 0).toFixed(2)}</td>
-                                <td className="px-3 py-1 text-right text-green-600">+${((t.total || 0) - costo).toFixed(2)}</td>
-                              </tr>
-                            )
-                          })}
+                      {ticketsDelTurno.map(t => {
+                        let costo = 0
+                        try {
+                          const prods = JSON.parse(t.productos || '[]')
+                          const arr = Array.isArray(prods) ? prods : []
+                          costo = arr.reduce((a, p) => {
+                            const costoItem = (p.precio_costo || 0) || (productosMap[String(p.producto_id || p.id)]?.precio_costo || 0)
+                            return a + (costoItem * (p.cantidad || 1))
+                          }, 0)
+                        } catch {}
+                        return (
+                          <tr key={t.id}>
+                            <td className="px-3 py-1 font-semibold">{t.numero_ticket}</td>
+                            <td className="px-3 py-1 text-right">${(t.total || 0).toFixed(2)}</td>
+                            <td className="px-3 py-1 text-right text-green-600">+${((t.total || 0) - costo).toFixed(2)}</td>
+                          </tr>
+                        )
+                      })}
                         </tbody>
                       </table>
                     </div>

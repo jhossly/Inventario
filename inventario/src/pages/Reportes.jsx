@@ -292,34 +292,34 @@ export default function Reportes() {
                     {/* Secciones con tablas y export por sección */}
                     <SeccionReporte titulo="Facturas de Venta" icon={ShoppingCart} color="text-[#22c55e]"
                         columnas={[{ k: 'Fecha', h: 'Fecha' }, { k: 'Ticket', h: 'Ticket' }, { k: 'Total', h: 'Total' }, { k: 'Ganancia', h: 'Ganancia' }, { k: 'Método', h: 'Método' }]}
-                        filas={ventasRows} onExport={async (f) => { const s = await exportarSeccion('ventas'); aplicarExport(s, f, sufijo + '_ventas') }} />
+                        filas={ventasRows} onExport={async (f) => { const s = await exportarSeccion('ventas'); aplicarExport(setMensaje, s, f, sufijo + '_ventas') }} />
 
                     <SeccionReporte titulo="Detalle de Ventas por Producto" icon={TrendingUp} color="text-[#8b5cf6]"
                         columnas={[{ k: 'Ticket', h: 'Ticket' }, { k: 'Fecha', h: 'Fecha' }, { k: 'Producto', h: 'Producto' }, { k: 'Cantidad', h: 'Cantidad' }, { k: 'Precio Venta', h: 'Precio Venta' }, { k: 'Precio Costo', h: 'Precio Costo' }, { k: 'Ganancia', h: 'Ganancia' }]}
-                        filas={detalleVentasPorProducto} onExport={async (f) => { const s = await exportarSeccion('rentabilidad'); aplicarExport(s, f, sufijo + '_detalle_ventas') }} />
+                        filas={detalleVentasPorProducto} onExport={async (f) => { const s = await exportarSeccion('rentabilidad'); aplicarExport(setMensaje, s, f, sufijo + '_detalle_ventas') }} />
 
                     <SeccionReporte titulo="Ingresos" icon={ArrowUpCircle} color="text-[#14b8a6]"
                         columnas={[{ k: 'Fecha', h: 'Fecha' }, { k: 'Motivo', h: 'Motivo' }, { k: 'Detalle', h: 'Detalle' }, { k: 'Monto', h: 'Monto' }]}
-                        filas={ingresosRows} onExport={async (f) => { const s = await exportarSeccion('ingresos'); aplicarExport(s, f, sufijo + '_ingresos') }} />
+                        filas={ingresosRows} onExport={async (f) => { const s = await exportarSeccion('ingresos'); aplicarExport(setMensaje, s, f, sufijo + '_ingresos') }} />
 
                     <SeccionReporte titulo="Gastos" icon={ArrowDownCircle} color="text-red-500"
                         columnas={[{ k: 'Fecha', h: 'Fecha' }, { k: 'Motivo', h: 'Motivo' }, { k: 'Detalle', h: 'Detalle' }, { k: 'Monto', h: 'Monto' }]}
-                        filas={gastosRows} onExport={async (f) => { const s = await exportarSeccion('gastos'); aplicarExport(s, f, sufijo + '_gastos') }} />
+                        filas={gastosRows} onExport={async (f) => { const s = await exportarSeccion('gastos'); aplicarExport(setMensaje, s, f, sufijo + '_gastos') }} />
 
                     <SeccionReporte titulo="Compras a Proveedores" icon={Boxes} color="text-[#eab308]"
                         columnas={[{ k: 'Fecha', h: 'Fecha' }, { k: 'Factura', h: 'Factura' }, { k: 'Total', h: 'Total' }, { k: 'Estado', h: 'Estado' }]}
-                        filas={comprasRows} onExport={async (f) => { const s = await exportarSeccion('compras'); aplicarExport(s, f, sufijo + '_compras') }} />
+                        filas={comprasRows} onExport={async (f) => { const s = await exportarSeccion('compras'); aplicarExport(setMensaje, s, f, sufijo + '_compras') }} />
 
                     <SeccionReporte titulo="Rentabilidad por Producto" icon={TrendingUp} color="text-[#8b5cf6]"
                         columnas={[{ k: 'Producto', h: 'Producto' }, { k: 'Precio Compra', h: 'Precio Compra' }, { k: 'Precio Venta', h: 'Precio Venta' }, { k: 'Ganancia/unidad', h: 'Ganancia/unidad' }, { k: 'Margen %', h: 'Margen %' }, { k: 'Stock', h: 'Stock' }, { k: 'Ganancia Potencial', h: 'Ganancia Potencial' }]}
-                        filas={productosRentabilidad} onExport={async (f) => { const s = await exportarSeccion('rentabilidad'); aplicarExport(s, f, sufijo + '_rentabilidad') }} />
+                        filas={productosRentabilidad} onExport={async (f) => { const s = await exportarSeccion('rentabilidad'); aplicarExport(setMensaje, s, f, sufijo + '_rentabilidad') }} />
                 </>
             )}
         </div>
     )
 }
 
-function aplicarExport(seccion, formato, nombre) {
+function aplicarExport(setMensaje, seccion, formato, nombre) {
     if (formato === 'excel') exportExcel(seccion.rows, nombre)
     else if (formato === 'csv') exportCSV(seccion.rows, nombre)
     else if (formato === 'pdf') exportPDF(seccion.rows, seccion.cols, nombre, nombre)

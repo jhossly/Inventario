@@ -72,7 +72,8 @@ export default function POS() {
         nombre: producto.nombre,
         precio: producto.precio_venta,
         precio_costo: producto.precio_costo || 0,
-        cantidad: 1
+        cantidad: 1,
+        imagen_url: producto.imagen_url || ''
       }])
     }
   }
@@ -152,7 +153,8 @@ export default function POS() {
           producto_id: c.producto_id,
           cantidad: c.cantidad,
           precio: c.precio,
-          precio_costo: c.precio_costo || 0
+          precio_costo: c.precio_costo || 0,
+          imagen_url: c.imagen_url || ''
         })),
         metodo_pago: esCredito ? 'credito' : metodoPago,
         cajero_id: getCajeroId(),
@@ -249,8 +251,12 @@ export default function POS() {
                 onClick={() => agregarAlCarrito(p)}
                 className="bg-white border-2 border-menta-border rounded-2xl p-4 hover:border-menta/50 hover:bg-menta-bg transition text-left group shadow-sm"
               >
-                <div className="w-full h-20 bg-menta-bgborder bborder-menta-tintrounded-xl mb-3 flex items-center justify-center">
-                  <ShoppingCart size={40} className="text-text-subopacity-50 group-hover:opacity-100 transition" />
+                <div className="w-full h-20 bg-menta-bg border-2 border-menta-border border-menta-tint rounded-xl mb-3 flex items-center justify-center overflow-hidden">
+                  {p.imagen_url ? (
+                    <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    <ShoppingCart size={40} className="text-text-sub opacity-50 group-hover:opacity-100 transition" />
+                  )}
                 </div>
                 <p className="font-medium text-sm text-text-dark truncate">{p.nombre}</p>
                 <p className="text-menta-dark font-bold mt-1">${p.precio_venta}</p>

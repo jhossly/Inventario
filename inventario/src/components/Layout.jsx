@@ -285,7 +285,7 @@ export default function Layout() {
               {mostrarNotif && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto" style={{ borderColor: colores.border }}>
                   <div className="p-3 border-b font-semibold text-sm flex items-center justify-between" style={{ borderColor: colores.border }}>
-                    <span>Predicción de Stock (Monte Carlo)</span>
+                    <span>Predicción de Stock</span>
                     <span className="text-xs font-normal" style={{ color: colores.textSecondary }}>
                       {notificaciones.length} producto{notificaciones.length !== 1 ? 's' : ''}
                     </span>
